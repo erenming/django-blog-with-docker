@@ -1,0 +1,44 @@
+version: '2'
+services:
+    web:
+      restart: always
+      #　指定镜像创建源目录，在其根目录中必须包含Dockerfile
+      build: ./blog
+      # 多行命令
+      command: bash -c "python3 manage.py makemigrations &&
+                        python3 manage.py migrate &&
+                        python3 init_admin.py &&
+                        /usr/local/bin/gunicorn --bind 0.0.0.0:8000 blog.wsgi:application -w 2"
+      # 端口映射(host:container)
+      ports:
+        - "8000:8000"
+      # 指定你要挂载的容器卷,路径可任意
+      volumes:
+        - /code
+      # 指定要进行相互间通信的容器名
+      links:
+        - db
+        - redis
+
+    nginx:
+      restart: always
+      build: ./nginx/
+      ports:
+        - "80:80"
+      # nginx容器挂载在与web容器相同的容器卷上
+      volumes_from:
+        - web
+      links:
+        - web:web
+
+    db:
+      restart: always
+      image: postgres:latest
+      volumes:
+        - /var/lib/postgresql/data
+
+    redis:
+      restart: always
+      image: redis:latest
+      volumes:
+        - /data
